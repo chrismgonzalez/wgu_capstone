@@ -1,4 +1,4 @@
-from sklearn.ensemble import RandomForestClassifier
+
 import joblib
 
 import numpy as np
@@ -7,6 +7,7 @@ import pickle
 import os
 
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
 #from sklearn.metrics import accuracy_score
 
 # define data import path
@@ -23,9 +24,7 @@ c = pd.get_dummies(data['slope'], prefix="slope")
 frames = [data, a, b, c]
 data = pd.concat(frames, axis=1)
 
-data = data.drop(columns = ['cp', 'thal', 'slope'])
-
-print(data.head())
+data = data.drop(columns=['cp', 'thal', 'slope'])
 
 # normalize data
 
@@ -44,3 +43,19 @@ y_train = y_train.T
 x_test = x_test.T
 y_test = y_test.T
 
+# begin Random Forest Classifier
+
+rf = RandomForestClassifier(n_estimators=1000, random_state=1)
+rf.fit(x_train.T, y_train.T)
+
+acc = rf.score(x_test.T, y_test.T)
+print("Random Forest Accuracy Score : {:.2f}%".format(acc))
+
+#save the trained model
+model_path = os.path.join(root, 'models/rfc.sav')
+joblib.dump(rf, model_path)
+
+# save the scaler object
+pickle_path = os.path.join(root, 'models/rfc.pkl')
+with open(pickle_path, 'wb') as pickled_model:
+    pickle.dump(pickle_path, pickled_model)
