@@ -8,54 +8,60 @@ import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-#from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import MinMaxScaler
+
+from sklearn.metrics import accuracy_score
 
 # define data import path
 root = os.path.dirname(__file__)
-path_df = os.path.join(root, 'data/heart.csv')
+path_df = os.path.join(root, 'data/cleaned_data.csv')
 data = pd.read_csv(path_df)
 
-# create dummy variables
-
-a = pd.get_dummies(data['cp'], prefix="cp")
-b = pd.get_dummies(data['thal'], prefix="thal")
-c = pd.get_dummies(data['slope'], prefix="slope")
-
-frames = [data, a, b, c]
-data = pd.concat(frames, axis=1)
-
-data = data.drop(columns=['cp', 'thal', 'slope'])
+scaler = MinMaxScaler()
 
 # normalize data
 
-y = data.target.values
-x_data = data.drop(['target'], axis=1)
+# y = data.target.values
+# x_data = data.drop(['target'], axis=1)
+#
+# x = (x_data - np.min(x_data)) / (np.max(x_data) - np.min(x_data)).values
 
-x = (x_data - np.min(x_data)) / (np.max(x_data) - np.min(x_data)).values
 
 # split data -- 80% will be training data, 20% will be test data
+train, test = train_test_split(data, test_size=0.25)
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0)
+X_train = train.drop('num', axis=1)
+Y_train = train['num']
 
-# transpose matrices
-x_train = x_train.T
-y_train = y_train.T
-x_test = x_test.T
-y_test = y_test.T
+X_test = test.drop('num', axis=1)
+Y_test = test['num']
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.fit_transform(X_test)
 
 # begin Random Forest Classifier
 
-rf = RandomForestClassifier(n_estimators=1000, random_state=1)
-rf.fit(x_train.T, y_train.T)
+rfc = RandomForestClassifier()
+rfc.fit(X_train, Y_train)
 
-acc = rf.score(x_test.T, y_test.T)
-print("Random Forest Accuracy Score : {:.2f}%".format(acc))
+# Testing model accuracy. Average is taken as test set is very small hence accuracy varies a lot everytime the model is trained
+acc = 0
+acc_binary = 0
+for i in range(0, 20):
+    Y_hat = rfc.predict(X_test)
+    Y_hat_bin = Y_hat>0
+    Y_test_bin = Y_test>0
+    acc = acc + accuracy_score(Y_hat, Y_test)
+    acc_binary = acc_binary +accuracy_score(Y_hat_bin, Y_test_bin)
 
-#save the trained model
+print("Average test Accuracy:{}".format(acc/20))
+print("Average binary accuracy:{}".format(acc_binary/20))
+
+# Saving the trained model for inference
 model_path = os.path.join(root, 'models/rfc.sav')
-joblib.dump(rf, model_path)
+joblib.dump(rfc, model_path)
 
-# save the scaler object
-pickle_path = os.path.join(root, 'models/rfc.pkl')
-with open(pickle_path, 'wb') as pickled_model:
-    pickle.dump(pickle_path, pickled_model)
+# Saving the scaler object
+scaler_path = os.path.join(root, 'models/scaler.pkl')
+with open(scaler_path, 'wb') as scaler_file:
+    pickle.dump(scaler, scaler_file)
